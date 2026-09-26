@@ -30,7 +30,7 @@
     <div class="spinner"></div>
     <h1>Rutas UPB</h1>
     <p id="estado">Cargando Java en tu navegador…<br>La primera vez puede tardar hasta un minuto.</p>
-    <p><small>Código fuente: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
+    <p><small>Versión web 3 · Código: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
   </div>
   <div id="pantalla"></div>
   <div id="girar">📱↻ Gira el celular para ver la aplicación más grande. También puedes ampliar con dos dedos.</div>
@@ -56,6 +56,16 @@
     ajustarPantalla();
     window.addEventListener("orientationchange", () => setTimeout(ajustarPantalla, 300));
     window.addEventListener("resize", ajustarPantalla);
+
+    // Si otra librería agrega su propio <meta viewport>, se elimina y se reaplica el nuestro
+    new MutationObserver(() => {
+      let cambio = false;
+      document.querySelectorAll('meta[name="viewport"]').forEach(m => {
+        if (m !== viewport) { m.remove(); cambio = true; }
+      });
+      if (!viewport.isConnected) { document.head.appendChild(viewport); cambio = true; }
+      if (cambio) ajustarPantalla();
+    }).observe(document.head, { childList: true });
 
     // Oculta el mensaje de carga cuando Java muestre su primera ventana
     function ocultarCargando() { cargando.style.display = "none"; }
