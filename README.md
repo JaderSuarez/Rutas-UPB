@@ -9,7 +9,10 @@ Aplicación de escritorio en **Java (Swing)** para encontrar la mejor ruta entre
 
 ## ▶️ Probarlo ahora
 
-### Opción 1: descargar y ejecutar (recomendada)
+### 📱 En el navegador (celular o PC), sin instalar nada
+Abre **https://jadersuarez.github.io/Rutas-UPB/** — la misma aplicación Java se ejecuta dentro del navegador gracias a [CheerpJ](https://cheerpj.com/). La primera carga tarda unos segundos. Los usuarios que registres quedan guardados en ese navegador.
+
+### Opción 1: descargar y ejecutar en un PC
 1. Instala **Java 17 o superior** ([Adoptium](https://adoptium.net/)).
 2. Descarga **`RutasUPB.jar`** desde la sección [**Releases**](https://github.com/JaderSuarez/Rutas-UPB/releases/latest).
 3. Haz doble clic en el archivo, o ejecuta:

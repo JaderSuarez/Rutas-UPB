@@ -14,10 +14,12 @@ import java.util.List;
  *
  * Los archivos se guardan en la carpeta "datos" junto al programa; si no
  * existe, se crea automáticamente la primera vez que se guarda algo.
+ * La carpeta se puede cambiar con la propiedad del sistema "rutasupb.datos"
+ * (la versión web la usa para guardar en el almacenamiento del navegador).
  */
 public class ArchivoDatos {
 
-    public static final String CARPETA = "datos";
+    public static final String CARPETA = System.getProperty("rutasupb.datos", "datos");
     private static final String SEPARADOR = "|";
 
     private final File archivo;

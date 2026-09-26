@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rutas UPB</title>
+  <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; color: #eee;
+                 font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    #pantalla { position: fixed; inset: 0; }
+    #cargando { position: fixed; inset: 0; display: flex; flex-direction: column;
+                align-items: center; justify-content: center; gap: 16px;
+                text-align: center; padding: 16px; background: #111; z-index: 10; }
+    #cargando h1 { margin: 0; font-size: 1.6rem; }
+    #cargando p { margin: 0; opacity: .8; max-width: 28rem; }
+    .spinner { width: 42px; height: 42px; border: 4px solid #444;
+               border-top-color: #e30613; border-radius: 50%;
+               animation: girar 1s linear infinite; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    a { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div id="cargando">
+    <div class="spinner"></div>
+    <h1>Rutas UPB</h1>
+    <p id="estado">Cargando Java en tu navegador… la primera vez puede tardar unos segundos.</p>
+    <p><small>Código fuente: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
+  </div>
+  <div id="pantalla"></div>
+
+  <script type="module">
+    const estado = document.getElementById("estado");
+    try {
+      await cheerpjInit({
+        version: 17,
+        // Los usuarios registrados y los bloqueos se guardan en el navegador
+        javaProperties: ["rutasupb.datos=/files/rutasupb"]
+      });
+      cheerpjCreateDisplay(-1, -1, document.getElementById("pantalla"));
+      document.getElementById("cargando").style.display = "none";
+      // "/app/" es la raíz del servidor web; la página vive en /Rutas-UPB/
+      const carpeta = location.pathname.replace(/[^/]*$/, "");
+      await cheerpjRunJar("/app" + carpeta + "RutasUPB.jar");
+    } catch (e) {
+      document.getElementById("cargando").style.display = "flex";
+      estado.textContent = "No se pudo iniciar la aplicación: " + e;
+    }
+  </script>
+</body>
+</html>
