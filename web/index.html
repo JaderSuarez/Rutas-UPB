@@ -2,22 +2,26 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- El ancho real se ajusta por JavaScript para que la app quepa completa en la pantalla -->
+  <meta id="viewport" name="viewport" content="width=1040, user-scalable=yes">
   <title>Rutas UPB</title>
   <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
   <style>
-    html, body { margin: 0; height: 100%; background: #111; color: #eee;
+    html, body { margin: 0; background: #111; color: #eee;
                  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-    #pantalla { position: fixed; inset: 0; }
+    /* "Pantalla" de escritorio donde Java dibuja sus ventanas */
+    #pantalla { width: 1024px; height: 760px; margin: 8px auto; background: #1b1b1b; }
     #cargando { position: fixed; inset: 0; display: flex; flex-direction: column;
-                align-items: center; justify-content: center; gap: 16px;
-                text-align: center; padding: 16px; background: #111; z-index: 10; }
-    #cargando h1 { margin: 0; font-size: 1.6rem; }
-    #cargando p { margin: 0; opacity: .8; max-width: 28rem; }
-    .spinner { width: 42px; height: 42px; border: 4px solid #444;
+                align-items: center; justify-content: center; gap: 24px;
+                text-align: center; padding: 32px; background: #111; z-index: 10; }
+    #cargando h1 { margin: 0; font-size: 56px; }
+    #cargando p { margin: 0; opacity: .85; font-size: 30px; max-width: 900px; }
+    #cargando small { font-size: 24px; }
+    .spinner { width: 90px; height: 90px; border: 9px solid #444;
                border-top-color: #e30613; border-radius: 50%;
                animation: girar 1s linear infinite; }
     @keyframes girar { to { transform: rotate(360deg); } }
+    #girar { display: none; text-align: center; font-size: 26px; opacity: .8; padding: 12px; }
     a { color: #ff6b6b; }
   </style>
 </head>
@@ -25,26 +29,58 @@
   <div id="cargando">
     <div class="spinner"></div>
     <h1>Rutas UPB</h1>
-    <p id="estado">Cargando Java en tu navegador… la primera vez puede tardar unos segundos.</p>
+    <p id="estado">Cargando Java en tu navegador…<br>La primera vez puede tardar hasta un minuto.</p>
     <p><small>Código fuente: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
   </div>
   <div id="pantalla"></div>
+  <div id="girar">📱↻ Gira el celular para ver la aplicación más grande. También puedes ampliar con dos dedos.</div>
 
   <script type="module">
+    const ANCHO = 1040, ALTO = 800;   // pantalla de Java + márgenes
+    const viewport = document.getElementById("viewport");
+    const pantalla = document.getElementById("pantalla");
+    const cargando = document.getElementById("cargando");
     const estado = document.getElementById("estado");
+
+    // Elige un ancho de página tal que la app quepa entera a lo ancho y a lo alto.
+    // El navegador escala la página sola, así los toques caen en el lugar correcto.
+    function ajustarPantalla() {
+      const w = screen.width, h = screen.height;
+      const vertical = window.matchMedia("(orientation: portrait)").matches;
+      const proporcion = vertical ? Math.min(w, h) / Math.max(w, h) : Math.max(w, h) / Math.min(w, h);
+      const ancho = Math.max(ANCHO, Math.ceil(ALTO * proporcion));
+      viewport.setAttribute("content", "width=" + ancho + ", user-scalable=yes");
+      document.getElementById("girar").style.display =
+        vertical && Math.min(w, h) < 700 ? "block" : "none";
+    }
+    ajustarPantalla();
+    window.addEventListener("orientationchange", () => setTimeout(ajustarPantalla, 300));
+    window.addEventListener("resize", ajustarPantalla);
+
+    // Oculta el mensaje de carga cuando Java muestre su primera ventana
+    function ocultarCargando() { cargando.style.display = "none"; }
+    const observador = new MutationObserver(() => {
+      const hayVentana = [...pantalla.querySelectorAll("*")]
+        .some(el => el.offsetWidth > 300 && el.offsetHeight > 200 &&
+                    (el.offsetWidth < 1020 || el.offsetHeight < 750)); // no el lienzo completo
+      if (hayVentana) { setTimeout(ocultarCargando, 400); observador.disconnect(); }
+    });
+    setTimeout(ocultarCargando, 45000); // por si no se detecta la ventana
+
     try {
       await cheerpjInit({
         version: 17,
         // Los usuarios registrados y los bloqueos se guardan en el navegador
         javaProperties: ["rutasupb.datos=/files/rutasupb"]
       });
-      cheerpjCreateDisplay(-1, -1, document.getElementById("pantalla"));
-      document.getElementById("cargando").style.display = "none";
+      estado.innerHTML = "Abriendo Rutas UPB…";
+      cheerpjCreateDisplay(1024, 760, pantalla);
+      observador.observe(pantalla, { childList: true, subtree: true, attributes: true });
       // "/app/" es la raíz del servidor web; la página vive en /Rutas-UPB/
       const carpeta = location.pathname.replace(/[^/]*$/, "");
       await cheerpjRunJar("/app" + carpeta + "RutasUPB.jar");
     } catch (e) {
-      document.getElementById("cargando").style.display = "flex";
+      cargando.style.display = "flex";
       estado.textContent = "No se pudo iniciar la aplicación: " + e;
     }
   </script>
