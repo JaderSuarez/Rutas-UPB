@@ -21,16 +21,20 @@ import java.util.Map;
  * dibuja encima los pines de cada edificio en coordenadas calibradas.
  *
  * IMPORTANTE: las coordenadas de POSICIONES están calibradas para la imagen
- * original de 1678 x 937 px (src/main/resources/mapa_campus.png). Si se
+ * original de 1678 x 937 px (src/main/resources/mapa_campus.jpg). Si se
  * reemplaza la imagen por otra, hay que recalibrar este mapa de posiciones.
  */
 public class PanelMapaIsometrico extends JPanel {
 
-    private static final String RECURSO_MAPA = "/mapa_campus.png";
+    private static final String RECURSO_MAPA = "/mapa_campus.jpg";
     private static final int ANCHO_ORIGINAL = 1679;
     private static final int ALTO_ORIGINAL = 937;
 
     private BufferedImage imagenMapa;
+    /** Copia del mapa ya escalada al tamaño en pantalla: evita reescalarlo en cada repintado. */
+    private BufferedImage mapaEscalado;
+    /** Límite de píxeles para guardar la copia escalada (con mucho zoom se escala al vuelo). */
+    private static final long MAX_PIXELES_CACHE = 6_000_000L;
     private final Map<String, Point> posiciones = new HashMap<>();
     /** Tramos que no se dibujan en línea recta, sino siguiendo el camino real. */
     private final Map<String, java.util.List<Point>> trazadosEspeciales = new HashMap<>();
@@ -168,6 +172,27 @@ public class PanelMapaIsometrico extends JPanel {
         } catch (Exception e) {
             imagenMapa = null;
         }
+    }
+
+    /**
+     * Dibuja el mapa con el tamaño indicado. La versión escalada se calcula una sola
+     * vez y se reutiliza mientras no cambie el tamaño (zoom o ventana), porque reescalar
+     * la imagen completa en cada repintado es lento, sobre todo en la versión web.
+     */
+    private void dibujarMapa(Graphics2D g2, int x, int y, int ancho, int alto) {
+        if (ancho <= 0 || alto <= 0) return;
+        if ((long) ancho * alto > MAX_PIXELES_CACHE) {
+            g2.drawImage(imagenMapa, x, y, ancho, alto, null);
+            return;
+        }
+        if (mapaEscalado == null || mapaEscalado.getWidth() != ancho || mapaEscalado.getHeight() != alto) {
+            mapaEscalado = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_RGB);
+            Graphics2D gc = mapaEscalado.createGraphics();
+            gc.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            gc.drawImage(imagenMapa, 0, 0, ancho, alto, null);
+            gc.dispose();
+        }
+        g2.drawImage(mapaEscalado, x, y, null);
     }
 
     /** Coordenadas del centro de cada pin sobre la imagen original (1678 x 937). */
@@ -319,7 +344,7 @@ public class PanelMapaIsometrico extends JPanel {
         if (imagenMapa == null) {
             g2.setColor(UIColores.TEXTO_MUTED);
             g2.setFont(new Font(EstiloUPB.FAMILIA, Font.ITALIC, 13));
-            g2.drawString("No se encontró la imagen del mapa (src/main/resources/mapa_campus.png).", 20, 40);
+            g2.drawString("No se encontró la imagen del mapa (src/main/resources/mapa_campus.jpg).", 20, 40);
             g2.drawString("Usa la pestaña \"Vista Grafo\" mientras se agrega el recurso.", 20, 62);
             return;
         }
@@ -352,7 +377,7 @@ public class PanelMapaIsometrico extends JPanel {
             offsetY = Math.max(0, (getHeight() - altoDibujo) / 2);
         }
 
-        g2.drawImage(imagenMapa, offsetX, offsetY, anchoDibujo, altoDibujo, null);
+        dibujarMapa(g2, offsetX, offsetY, anchoDibujo, altoDibujo);
         ultimaEscala = escala;
         ultimoOffsetX = offsetX;
         ultimoOffsetY = offsetY;
@@ -391,7 +416,7 @@ public class PanelMapaIsometrico extends JPanel {
                     }
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alfa[k]));
                     g2.setClip(capa);
-                    g2.drawImage(imagenMapa, offsetX, offsetY, anchoDibujo, altoDibujo, null);
+                    dibujarMapa(g2, offsetX, offsetY, anchoDibujo, altoDibujo);
                 }
                 g2.setComposite(compOriginal);
                 if (enPantalla != null) {
@@ -399,7 +424,7 @@ public class PanelMapaIsometrico extends JPanel {
                             enPantalla.width, enPantalla.height, 40 * escala, 40 * escala)));
                 }
                 g2.setClip(zona);
-                g2.drawImage(imagenMapa, offsetX, offsetY, anchoDibujo, altoDibujo, null);
+                dibujarMapa(g2, offsetX, offsetY, anchoDibujo, altoDibujo);
                 g2.setClip(clipOriginal);
             }
         }
@@ -503,7 +528,7 @@ public class PanelMapaIsometrico extends JPanel {
 
     /**
      * Contorno aproximado de cada edificio en la imagen original (x, y, ancho, alto),
-     * calibrado a mano sobre mapa_campus.png. Se usa en el modo enfoque para mostrar
+     * calibrado a mano sobre mapa_campus.jpg. Se usa en el modo enfoque para mostrar
      * nítido el edificio completo cuando la ruta pasa por él. Para los puntos sin
      * edificio propio (CAF y porterías) cubre su rótulo; la C no tiene edificio visible.
      */
@@ -785,8 +810,8 @@ public class PanelMapaIsometrico extends JPanel {
                 if (imagenMapa != null) {
                     Shape clipPrevio = g2.getClip();
                     g2.clip(new RoundRectangle2D.Double(zona.x, zona.y, zona.width, zona.height, 12, 12));
-                    g2.drawImage(imagenMapa, offsetX, offsetY, (int) (imagenMapa.getWidth() * escala),
-                            (int) (imagenMapa.getHeight() * escala), null);
+                    dibujarMapa(g2, offsetX, offsetY, (int) (imagenMapa.getWidth() * escala),
+                            (int) (imagenMapa.getHeight() * escala));
                     g2.setClip(clipPrevio);
                 }
                 zona.grow(5, 5);
