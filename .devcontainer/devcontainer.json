@@ -1,0 +1,25 @@
+{
+  "name": "Rutas UPB (Java + escritorio en el navegador)",
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": "true"
+    },
+    "ghcr.io/devcontainers/features/desktop-lite:1": {}
+  },
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Escritorio (contraseña: vscode)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "mvn -B -q package -DskipTests",
+  "postAttachCommand": "DISPLAY=:1 nohup java -jar target/RutasUPB.jar > /tmp/rutasupb.log 2>&1 &",
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack"]
+    }
+  }
+}

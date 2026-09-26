@@ -1,0 +1,13 @@
+# Maven
+target/
+
+# Datos generados al ejecutar (usuarios, bloqueos, etc.)
+datos/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+nbproject/private/
+nbactions.xml
+.DS_Store
