@@ -541,7 +541,7 @@ public class PanelAdministracion extends JPanel {
         form.setBackground(UIColores.TARJETA);
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBorder(BorderFactory.createCompoundBorder(
-                EstiloUPB.bordeSeccion("Registrar nuevo edificio"),
+                EstiloUPB.bordeSeccion("Registrar nuevo punto en el campus"),
                 BorderFactory.createEmptyBorder(10, 12, 12, 12)));
         form.setPreferredSize(new Dimension(360, 0));
 
@@ -550,10 +550,10 @@ public class PanelAdministracion extends JPanel {
         EstiloUPB.redondearCampo(txtIdEdificio);
         EstiloUPB.redondearCampo(txtNombreEdificio);
         form.add(filaCampo("Identificador:", EstiloUPB.conTextoGuia(txtIdEdificio, "Ej.: N")));
-        form.add(filaCampo("Nombre:", EstiloUPB.conTextoGuia(txtNombreEdificio, "Ej.: Edificio N")));
+        form.add(filaCampo("Nombre:", EstiloUPB.conTextoGuia(txtNombreEdificio, "Ej.: Punto Nuevo")));
         form.add(Box.createVerticalStrut(6));
 
-        JLabel tituloConexiones = new JLabel("Conexiones con otros edificios");
+        JLabel tituloConexiones = new JLabel("Conexiones con otros puntos del campus");
         tituloConexiones.setFont(new Font(EstiloUPB.FAMILIA, Font.BOLD, 12));
         tituloConexiones.setForeground(UIColores.PRIMARIO);
         tituloConexiones.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -619,7 +619,7 @@ public class PanelAdministracion extends JPanel {
         lblAvisoEdificio.setFont(new Font(EstiloUPB.FAMILIA, Font.BOLD, 12));
         lblAvisoEdificio.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnAgregar = botonPrimario("Agregar edificio al grafo");
+        JButton btnAgregar = botonPrimario("Agregar punto al grafo");
         btnAgregar.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnAgregar.addActionListener(e -> agregarEdificio());
 
@@ -712,11 +712,11 @@ public class PanelAdministracion extends JPanel {
         String nombre = txtNombreEdificio.getText().trim();
 
         if (id.isEmpty()) {
-            avisoEdificio("Escribe el identificador del edificio.", false);
+            avisoEdificio("Escribe el identificador del punto.", false);
             return;
         }
         if (ubicacionGrafo == null || ubicacionMapa == null) {
-            avisoEdificio("Ubica el edificio en las dos vistas antes de agregarlo.", false);
+            avisoEdificio("Ubica el punto en las dos vistas antes de agregarlo.", false);
             return;
         }
 
@@ -726,13 +726,13 @@ public class PanelAdministracion extends JPanel {
             String destino = (String) fila.combo.getSelectedItem();
             double distancia = ((Number) fila.distancia.getValue()).doubleValue();
             if (destino == null) {
-                avisoEdificio("Selecciona el edificio de cada conexión.", false);
+                avisoEdificio("Selecciona el punto de cada conexión.", false);
                 return;
             }
             conexiones.add(new CampusControlador.ConexionNueva(destino, distancia, fila.escaleras.isSelected()));
         }
         if (conexiones.isEmpty()) {
-            avisoEdificio("Agrega al menos una conexión con otro edificio.", false);
+            avisoEdificio("Agrega al menos una conexión con otro punto.", false);
             return;
         }
 
@@ -742,7 +742,7 @@ public class PanelAdministracion extends JPanel {
                     ubicacionMapa.x, ubicacionMapa.y,
                     conexiones);
 
-            String nombreVisible = nombre.isEmpty() ? ("Edificio " + id) : nombre;
+            String nombreVisible = nombre.isEmpty() ? ("Punto " + id) : nombre;
             panelMapa.registrarPosicionEdificio(id,
                     ubicacionGrafo.x, ubicacionGrafo.y,
                     ubicacionMapa.x, ubicacionMapa.y, nombreVisible);
@@ -750,7 +750,7 @@ public class PanelAdministracion extends JPanel {
             String detalleConexiones = conexiones.size() == 1
                     ? "1 conexión"
                     : conexiones.size() + " conexiones";
-            avisoEdificio("Edificio \"" + id + "\" agregado con " + detalleConexiones + ".", true);
+            avisoEdificio("Punto \"" + id + "\" agregado con " + detalleConexiones + ".", true);
 
             // Limpiar el formulario y refrescar todo lo que depende del grafo
             txtIdEdificio.setText("");

@@ -468,17 +468,29 @@ public class PanelMapa extends JPanel {
                 boolean deRuta = esAristaDeRuta(a, b);
                 String txt = String.format("%.0f m", c.getDistancia());
                 int w = fm.stringWidth(txt) + 10, h = fm.getHeight() + 2;
+                // Se prueba cada posición y se elige la primera totalmente libre; si ninguna lo
+                // está (aristas cortas en zonas muy pobladas, p. ej. I-L, E-H, H-F, F-E, H-G),
+                // se usa la que menos se superponga, en vez de omitir la distancia.
                 Rectangle elegido = null;
-                for (double t : posiciones) {
-                    Point m = puntoEn(a, b, pA, pB, t);
-                    Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
-                    boolean libre = true;
-                    for (Rectangle o : ocupados) {
-                        if (o.intersects(r)) { libre = false; break; }
+                int mejorChoque = Integer.MAX_VALUE;
+                buscarPosicion:
+                for (int lado : new int[]{0, 1, -1}) {   // sobre la línea, y desplazada a cada lado
+                    for (double t : posiciones) {
+                        Point m = puntoEn(a, b, pA, pB, t);
+                        if (lado != 0) {   // desplazamiento perpendicular al tramo, para tríos de nodos muy juntos
+                            double dx = pB.x - pA.x, dy = pB.y - pA.y, largo = Math.max(1, Math.hypot(dx, dy));
+                            m = new Point((int) (m.x - dy / largo * (h + 3) * lado), (int) (m.y + dx / largo * (h + 3) * lado));
+                        }
+                        Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
+                        int choque = 0;
+                        for (Rectangle o : ocupados) {
+                            Rectangle inter = o.intersection(r);
+                            if (!inter.isEmpty()) choque += inter.width * inter.height;
+                        }
+                        if (choque < mejorChoque) { mejorChoque = choque; elegido = r; }
+                        if (choque == 0) break buscarPosicion;
                     }
-                    if (libre) { elegido = r; break; }
                 }
-                if (elegido == null) continue;
                 ocupados.add(new Rectangle(elegido.x - 2, elegido.y - 1, elegido.width + 4, elegido.height + 2));
                 boolean enFoco = !hayFoco
                         || (foco != null ? (a.equals(foco) || b.equals(foco)) : deRuta);

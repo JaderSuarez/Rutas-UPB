@@ -26,6 +26,7 @@ public class CampusRepositorio {
         mB.agregarLugar(new Lugar("L_B4", "La Tienda del Café El Gualilo", "Comidas"));
         mB.agregarLugar(new Lugar("L_B2", "Laboratorio de Física y Química", "Académico"));
         mB.agregarLugar(new Lugar("L_B3", "Sala de Docentes", "Académico"));
+        mB.agregarLugar(new Lugar("L_B5", "Metálicas", "Zona Común"));
 
         Edificio mC = new Edificio("C", "Edificio C");
         mC.agregarLugar(new Lugar("L_C1", "Banco de Bogotá", "Servicios"));
