@@ -5,6 +5,17 @@
   <!-- El ancho real se ajusta por JavaScript para que la app quepa completa en la pantalla -->
   <meta id="viewport" name="viewport" content="width=1040, user-scalable=yes">
   <title>Rutas UPB</title>
+  <script>
+    // En un celular se abre la versión móvil (Java compilado con TeaVM), que carga
+    // al instante. "?escritorio" fuerza esta versión de escritorio (CheerpJ).
+    (function () {
+      var pantallaChica = Math.min(screen.width, screen.height) < 820;
+      var tactil = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+      if (pantallaChica && tactil && location.search.indexOf("escritorio") < 0) {
+        location.replace("movil/");
+      }
+    })();
+  </script>
   <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
   <style>
     html, body { margin: 0; background: #111; color: #eee;
@@ -30,7 +41,7 @@
     <div class="spinner"></div>
     <h1>Rutas UPB</h1>
     <p id="estado">Cargando Java en tu navegador…<br>La primera vez puede tardar hasta un minuto.</p>
-    <p><small>Versión web 7 · Código: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
+    <p><small><a href="movil/">Abrir la versión para celular</a> · Versión web 8 · Código: <a href="https://github.com/JaderSuarez/Rutas-UPB">github.com/JaderSuarez/Rutas-UPB</a></small></p>
   </div>
   <div id="pantalla"></div>
   <div id="girar">📱↻ Gira el celular para ver la aplicación más grande. También puedes ampliar con dos dedos.</div>

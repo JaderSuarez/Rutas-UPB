@@ -1,12 +1,11 @@
 package modelo;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
- * Cifrado de contraseñas mediante SHA-256, disponible en el propio JDK
- * (java.security), sin necesidad de librerías externas.
+ * Cifrado de contraseñas mediante SHA-256 (clase Sha256, escrita en Java puro),
+ * sin necesidad de librerías externas. Da el mismo resultado que el SHA-256 del
+ * JDK (java.security) y además funciona en la versión para celular.
  *
  * Las contraseñas no se guardan nunca en texto plano: se almacena su resumen
  * (hash) y, al iniciar sesión, se compara el resumen de lo que escribe el
@@ -19,19 +18,13 @@ public class Seguridad {
     /** Devuelve el resumen de la contraseña, listo para guardarse. */
     public static String cifrar(String contrasena) {
         if (contrasena == null) contrasena = "";
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] resumen = md.digest(contrasena.getBytes(StandardCharsets.UTF_8));
+        byte[] resumen = Sha256.resumen(contrasena.getBytes(StandardCharsets.UTF_8));
 
-            StringBuilder sb = new StringBuilder(PREFIJO);
-            for (byte b : resumen) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 forma parte de la plataforma Java, así que no debería ocurrir.
-            throw new IllegalStateException("El algoritmo SHA-256 no está disponible.", e);
+        StringBuilder sb = new StringBuilder(PREFIJO);
+        for (byte b : resumen) {
+            sb.append(String.format("%02x", b));
         }
+        return sb.toString();
     }
 
     /** true si el valor guardado ya está cifrado con este esquema. */

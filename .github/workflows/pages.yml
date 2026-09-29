@@ -33,11 +33,16 @@ jobs:
       - name: Compilar el JAR
         run: mvn -B package -DskipTests
 
-      - name: Preparar el sitio (página + JAR)
+      - name: Compilar la versión para celular (Java -> JavaScript con TeaVM)
+        run: mvn -B -f movil/pom.xml package
+
+      - name: Preparar el sitio (escritorio + celular)
         run: |
-          mkdir _site
+          mkdir -p _site/movil
           cp web/index.html _site/
           cp target/RutasUPB.jar _site/
+          cp movil/web/* movil/target/web/app.js _site/movil/
+          cp src/main/resources/mapa_campus.jpg _site/movil/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

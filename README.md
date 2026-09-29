@@ -9,7 +9,7 @@ Aplicación de escritorio en **Java (Swing)** para encontrar la mejor ruta entre
 
 ## 📷 Escanea y pruébalo
 
-| 📱 Abrir la app en el navegador | ⬇️ Descargar el JAR (PC) | 💻 Ver el código |
+| 📱 Abrir la app (celular o PC) | ⬇️ Descargar el JAR (PC) | 💻 Ver el código |
 |:---:|:---:|:---:|
 | <img src="docs/qr-version-web.png" width="200" alt="QR versión web"> | <img src="docs/qr-descarga-jar.png" width="200" alt="QR descarga del JAR"> | <img src="docs/qr-rutas-upb.png" width="200" alt="QR repositorio"> |
 | [jadersuarez.github.io/Rutas-UPB](https://jadersuarez.github.io/Rutas-UPB/) | [RutasUPB.jar](https://github.com/JaderSuarez/Rutas-UPB/releases/latest/download/RutasUPB.jar) | [github.com/JaderSuarez/Rutas-UPB](https://github.com/JaderSuarez/Rutas-UPB) |
@@ -18,8 +18,18 @@ Aplicación de escritorio en **Java (Swing)** para encontrar la mejor ruta entre
 
 ## ▶️ Probarlo ahora
 
-### 📱 En el navegador (celular o PC), sin instalar nada
-Abre **https://jadersuarez.github.io/Rutas-UPB/** — la misma aplicación Java se ejecuta dentro del navegador gracias a [CheerpJ](https://cheerpj.com/). La primera carga tarda unos segundos. Los usuarios que registres quedan guardados en ese navegador.
+### 📱 En el celular: versión móvil
+Escanea el QR o abre **https://jadersuarez.github.io/Rutas-UPB/** desde el celular: se abre automáticamente la **versión para celular** (también en [/movil/](https://jadersuarez.github.io/Rutas-UPB/movil/)). Carga en segundos y está pensada para pantallas táctiles:
+
+- **Ruta:** origen, destino y opción *evitar escaleras*; distancia, tiempo y recorrido paso a paso.
+- **Buscar:** lugares del campus (cafeterías, oficinas, laboratorios…) sin importar tildes.
+- **Mapa:** mapa ilustrado con la ruta; arrastra para moverte, pellizca para hacer zoom y toca un edificio para ver sus lugares.
+- **Iniciar sesión / registro** y **panel de administración** (bloquear caminos, agregar puntos, velocidades, historial).
+
+Está escrita en **Java** (carpeta `movil/`) y se traduce a JavaScript con [TeaVM](https://teavm.org/). Reutiliza la misma lógica de la app de escritorio: `CampusControlador`, `GrafoCampus`, Dijkstra, `EstimadorTiempo`, `BuscadorLugares` y los repositorios. Los datos (usuarios, bloqueos, puntos nuevos) se guardan en el navegador de cada celular.
+
+### 💻 En el navegador de un PC
+En un computador, el mismo enlace abre la **aplicación de escritorio completa** (Swing) dentro del navegador gracias a [CheerpJ](https://cheerpj.com/). La primera carga tarda unos segundos. Desde un celular se puede forzar con [`?escritorio`](https://jadersuarez.github.io/Rutas-UPB/?escritorio).
 
 ### Opción 1: descargar y ejecutar en un PC
 1. Instala **Java 17 o superior** ([Adoptium](https://adoptium.net/)).
@@ -67,6 +77,13 @@ src/main/java
 ├── repositorio/   → datos del campus (edificios, lugares, caminos)
 ├── persistencia/  → guardado en archivos de texto (carpeta datos/)
 └── excepcion/     → RutaNoEncontradaException
+
+movil/src/main/java/movil   → versión para celular (Java → JavaScript con TeaVM)
+├── AppMovil          → punto de entrada y navegación por pestañas
+├── PantallaAcceso    → inicio de sesión, registro y acceso administrador
+├── PantallaRuta / PantallaBuscar / PantallaMapa / PantallaAdmin
+├── MapaCampus        → mapa en canvas con zoom táctil, pines y ruta
+└── PersistenciaWeb   → guarda los archivos de datos en el navegador (localStorage)
 ```
 
 Conceptos aplicados:
@@ -75,11 +92,12 @@ Conceptos aplicados:
 - **Patrón MVC**
 - **Persistencia en archivos** sin librerías externas
 - **Contraseñas cifradas** (`Seguridad`)
-- **Pruebas unitarias con JUnit 5** (27 pruebas en `src/test/java`)
+- **Pruebas unitarias con JUnit 5** (pruebas en `src/test/java` y `movil/src/test/java`)
 
 ## ✅ Pruebas
 ```bash
-mvn test
+mvn test                     # app de escritorio y lógica compartida
+mvn -f movil/pom.xml package # compila la versión para celular y prueba que el mapa coincide con el de escritorio
 ```
 Cada vez que se sube código, GitHub Actions compila el proyecto y ejecuta las pruebas automáticamente.
 

@@ -1,15 +1,24 @@
 package modelo;
 
-import java.text.Normalizer;
 import java.util.*;
 
 public class BuscadorLugares {
 
+    // Letras con tilde o diacrítico y su equivalente sin él (misma posición en ambas cadenas).
+    // Se usa una tabla en vez de java.text.Normalizer para que la búsqueda también
+    // funcione en la versión para celular, donde Normalizer no está disponible.
+    private static final String CON_TILDE = "ÁÀÂÄÃÅáàâäãåÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÖÕóòôöõÚÙÛÜúùûüÑñÇçÝýÿ";
+    private static final String SIN_TILDE = "AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuNnCcYyy";
+
     /** Quita tildes/diacríticos para que la búsqueda no dependa de acentos. */
-    private static String normalizar(String texto) {
-        String sinTildes = Normalizer.normalize(texto, Normalizer.Form.NFD)
-                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-        return sinTildes.toLowerCase().trim();
+    public static String normalizar(String texto) {
+        StringBuilder sb = new StringBuilder(texto.length());
+        for (int i = 0; i < texto.length(); i++) {
+            char ch = texto.charAt(i);
+            int pos = CON_TILDE.indexOf(ch);
+            sb.append(pos >= 0 ? SIN_TILDE.charAt(pos) : ch);
+        }
+        return sb.toString().toLowerCase().trim();
     }
 
     /**

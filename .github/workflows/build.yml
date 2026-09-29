@@ -26,6 +26,9 @@ jobs:
       - name: Compilar y ejecutar pruebas
         run: mvn -B package
 
+      - name: Compilar y probar la versión para celular
+        run: mvn -B -f movil/pom.xml package
+
       - name: Guardar el JAR
         uses: actions/upload-artifact@v4
         with:
