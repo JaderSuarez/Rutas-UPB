@@ -7,6 +7,15 @@ Aplicación de escritorio en **Java (Swing)** para encontrar la mejor ruta entre
 
 ---
 
+## 📷 Escanea y pruébalo
+
+| 📱 Abrir la app en el navegador | ⬇️ Descargar el JAR (PC) | 💻 Ver el código |
+|:---:|:---:|:---:|
+| <img src="docs/qr-version-web.png" width="200" alt="QR versión web"> | <img src="docs/qr-descarga-jar.png" width="200" alt="QR descarga del JAR"> | <img src="docs/qr-rutas-upb.png" width="200" alt="QR repositorio"> |
+| [jadersuarez.github.io/Rutas-UPB](https://jadersuarez.github.io/Rutas-UPB/) | [RutasUPB.jar](https://github.com/JaderSuarez/Rutas-UPB/releases/latest/download/RutasUPB.jar) | [github.com/JaderSuarez/Rutas-UPB](https://github.com/JaderSuarez/Rutas-UPB) |
+
+---
+
 ## ▶️ Probarlo ahora
 
 ### 📱 En el navegador (celular o PC), sin instalar nada

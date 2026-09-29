@@ -326,6 +326,104 @@ public class PanelMapa extends JPanel {
     }
 
     /** Caminos únicos (cada arista una sola vez). */
+    /** Posición ya calculada de la etiqueta de distancia de un camino. */
+    private static final class Etiqueta {
+        final Camino camino; final Rectangle zona; final Font fuente;
+        Etiqueta(Camino camino, Rectangle zona, Font fuente) { this.camino = camino; this.zona = zona; this.fuente = fuente; }
+    }
+
+    private java.util.List<Object> claveEtiquetas;
+    private java.util.List<Etiqueta> etiquetas = new java.util.ArrayList<>();
+
+    /** Todo lo que influye en dónde van las etiquetas de distancia. */
+    private java.util.List<Object> claveEtiquetas(java.util.List<Camino> caminos, double esc) {
+        java.util.List<Object> clave = new java.util.ArrayList<>();
+        clave.add(getWidth()); clave.add(getHeight()); clave.add(esc);
+        for (String id : posicionesBase.keySet()) { clave.add(id); clave.add(aPantalla(id)); clave.add(textoNodo(id)); }
+        for (Camino c : caminos) { clave.add(c.getOrigenId()); clave.add(c.getDestinoId()); clave.add(c.getDistancia()); }
+        clave.add(rutaActual == null ? null : new java.util.ArrayList<>(rutaActual));
+        return clave;
+    }
+
+    /**
+     * Ubica la etiqueta de distancia de cada camino sobre su propia arista o pegada a ella,
+     * sin tapar nodos, otras etiquetas ni la línea de OTRA arista. Si no hay buen lugar,
+     * usa una fuente menor. Primero la ruta; luego las aristas más cortas.
+     */
+    private java.util.List<Etiqueta> calcularEtiquetas(Graphics2D g2, java.util.List<Camino> caminos,
+                                                        Font fNormal, Font fPequena) {
+        java.util.List<Etiqueta> resultado = new java.util.ArrayList<>();
+        java.util.List<Rectangle> ocupados = new java.util.ArrayList<>();
+        for (String id : posicionesBase.keySet()) {
+            Point p = aPantalla(id);
+            if (p != null) {
+                Rectangle r = formaNodo(id, p, g2, 2).getBounds();
+                r.grow(2, 2);
+                ocupados.add(r);
+            }
+        }
+        // Trazo (delgado) de cada arista en pantalla, para saber si una etiqueta pisa otra línea
+        java.util.Map<Camino, Shape> trazos = new java.util.HashMap<>();
+        Stroke trazoFino = new BasicStroke(2f);
+        for (Camino c : caminos) {
+            Point pA = aPantalla(c.getOrigenId()), pB = aPantalla(c.getDestinoId());
+            if (pA != null && pB != null)
+                trazos.put(c, trazoFino.createStrokedShape(formaArista(c.getOrigenId(), c.getDestinoId(), pA, pB)));
+        }
+        java.util.List<Camino> orden = new java.util.ArrayList<>(caminos);
+        orden.removeIf(c -> !trazos.containsKey(c));
+        orden.sort((x, y) -> {
+            int r = Boolean.compare(!esAristaDeRuta(x.getOrigenId(), x.getDestinoId()),
+                                    !esAristaDeRuta(y.getOrigenId(), y.getDestinoId()));
+            if (r != 0) return r;
+            return Double.compare(aPantalla(x.getOrigenId()).distance(aPantalla(x.getDestinoId())),
+                                  aPantalla(y.getOrigenId()).distance(aPantalla(y.getDestinoId())));
+        });
+        double[] posiciones = {0.5, 0.4, 0.6, 0.32, 0.68, 0.25, 0.75};
+        for (Camino c : orden) {
+            String a = c.getOrigenId(), b = c.getDestinoId();
+            Point pA = aPantalla(a), pB = aPantalla(b);
+            String txt = String.format("%.0f m", c.getDistancia());
+            double dx = pB.x - pA.x, dy = pB.y - pA.y, largo = Math.max(1, Math.hypot(dx, dy));
+
+            Rectangle elegido = null;
+            Font fuenteElegida = fNormal;
+            double mejor = Double.MAX_VALUE;
+            for (Font f : new Font[]{fNormal, fPequena}) {
+                FontMetrics fmx = g2.getFontMetrics(f);
+                int w = fmx.stringWidth(txt) + (f == fNormal ? 10 : 7), h = fmx.getHeight() + (f == fNormal ? 2 : 0);
+                // lado 0: sobre la línea; ±1: pegada a un costado; ±2: un poco más separada
+                // (solo para aristas muy cortas, donde pegada taparía un nodo)
+                for (int lado : new int[]{0, 1, -1, 2, -2}) {
+                    for (double t : posiciones) {
+                        Point m = puntoEn(a, b, pA, pB, t);
+                        if (lado != 0) {
+                            double sep = Math.abs(lado) == 1 ? h / 2.0 : h * 1.25;
+                            int signo = Integer.signum(lado);
+                            m = new Point((int) Math.round(m.x - dy / largo * sep * signo),
+                                          (int) Math.round(m.y + dx / largo * sep * signo));
+                        }
+                        Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
+                        double puntaje = 0;
+                        for (Rectangle o : ocupados) {   // tapar un nodo u otra etiqueta es lo peor
+                            Rectangle inter = o.intersection(r);
+                            if (!inter.isEmpty()) puntaje += 6.0 * inter.width * inter.height;
+                        }
+                        for (java.util.Map.Entry<Camino, Shape> e : trazos.entrySet()) {
+                            if (e.getKey() != c && e.getValue().intersects(r)) puntaje += 600;   // pisa otra arista
+                        }
+                        puntaje += (lado == 0 ? 0 : Math.abs(lado) == 1 ? 70 : 140) + (f == fPequena ? 40 : 0) + Math.abs(t - 0.5) * 40;
+                        if (puntaje < mejor) { mejor = puntaje; elegido = r; fuenteElegida = f; }
+                    }
+                }
+                if (mejor < 40) break;   // con la fuente normal ya hay un buen lugar sobre la línea
+            }
+            ocupados.add(new Rectangle(elegido.x - 2, elegido.y - 1, elegido.width + 4, elegido.height + 2));
+            resultado.add(new Etiqueta(c, elegido, fuenteElegida));
+        }
+        return resultado;
+    }
+
     private java.util.List<Camino> caminosUnicos() {
         java.util.List<Camino> lista = new java.util.ArrayList<>();
         java.util.Set<String> vistos = new java.util.HashSet<>();
@@ -447,73 +545,21 @@ public class PanelMapa extends JPanel {
         if (mostrarDistancias) {
             Font fNormal = new Font(EstiloUPB.FAMILIA, Font.PLAIN, Math.max(9, (int) Math.round(11 * esc)));
             Font fPequena = new Font(EstiloUPB.FAMILIA, Font.PLAIN, Math.max(8, (int) Math.round(9 * esc)));
-            java.util.List<Rectangle> ocupados = new java.util.ArrayList<>();
-            for (String id : posicionesBase.keySet()) {
-                Point p = aPantalla(id);
-                if (p != null) {
-                    Rectangle r = formaNodo(id, p, g2, 2).getBounds();
-                    r.grow(2, 2);
-                    ocupados.add(r);
-                }
+            // La ubicación de las etiquetas solo cambia con el tamaño, el zoom, la ruta o los
+            // caminos; se guarda y se recalcula únicamente cuando alguno de ellos cambia
+            // (el panel se repinta con cada movimiento del mouse).
+            java.util.List<Object> clave = claveEtiquetas(caminos, esc);
+            if (!clave.equals(claveEtiquetas)) {
+                etiquetas = calcularEtiquetas(g2, caminos, fNormal, fPequena);
+                claveEtiquetas = clave;
             }
-            // Trazo (delgado) de cada arista en pantalla, para saber si una etiqueta pisa otra línea
-            java.util.Map<Camino, Shape> trazos = new java.util.HashMap<>();
-            Stroke trazoFino = new BasicStroke(2f);
-            for (Camino c : caminos) {
-                Point pA = aPantalla(c.getOrigenId()), pB = aPantalla(c.getDestinoId());
-                if (pA != null && pB != null)
-                    trazos.put(c, trazoFino.createStrokedShape(formaArista(c.getOrigenId(), c.getDestinoId(), pA, pB)));
-            }
-            java.util.List<Camino> orden = new java.util.ArrayList<>(caminos);
-            orden.removeIf(c -> !trazos.containsKey(c));
-            orden.sort((x, y) -> {
-                int r = Boolean.compare(!esAristaDeRuta(x.getOrigenId(), x.getDestinoId()),
-                                        !esAristaDeRuta(y.getOrigenId(), y.getDestinoId()));
-                if (r != 0) return r;
-                return Double.compare(aPantalla(x.getOrigenId()).distance(aPantalla(x.getDestinoId())),
-                                      aPantalla(y.getOrigenId()).distance(aPantalla(y.getDestinoId())));
-            });
-            double[] posiciones = {0.5, 0.4, 0.6, 0.32, 0.68, 0.25, 0.75};
-            for (Camino c : orden) {
+            for (Etiqueta et : etiquetas) {
+                Camino c = et.camino;
                 String a = c.getOrigenId(), b = c.getDestinoId();
-                Point pA = aPantalla(a), pB = aPantalla(b);
                 boolean deRuta = esAristaDeRuta(a, b);
                 String txt = String.format("%.0f m", c.getDistancia());
-                double dx = pB.x - pA.x, dy = pB.y - pA.y, largo = Math.max(1, Math.hypot(dx, dy));
-
-                Rectangle elegido = null;
-                Font fuenteElegida = fNormal;
-                double mejor = Double.MAX_VALUE;
-                for (Font f : new Font[]{fNormal, fPequena}) {
-                    FontMetrics fmx = g2.getFontMetrics(f);
-                    int w = fmx.stringWidth(txt) + (f == fNormal ? 10 : 7), h = fmx.getHeight() + (f == fNormal ? 2 : 0);
-                    // lado 0: sobre la línea; ±1: pegada a un costado; ±2: un poco más separada
-                    // (solo para aristas muy cortas, donde pegada taparía un nodo)
-                    for (int lado : new int[]{0, 1, -1, 2, -2}) {
-                        for (double t : posiciones) {
-                            Point m = puntoEn(a, b, pA, pB, t);
-                            if (lado != 0) {
-                                double sep = Math.abs(lado) == 1 ? h / 2.0 : h * 1.25;
-                                int signo = Integer.signum(lado);
-                                m = new Point((int) Math.round(m.x - dy / largo * sep * signo),
-                                              (int) Math.round(m.y + dx / largo * sep * signo));
-                            }
-                            Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
-                            double puntaje = 0;
-                            for (Rectangle o : ocupados) {   // tapar un nodo u otra etiqueta es lo peor
-                                Rectangle inter = o.intersection(r);
-                                if (!inter.isEmpty()) puntaje += 6.0 * inter.width * inter.height;
-                            }
-                            for (java.util.Map.Entry<Camino, Shape> e : trazos.entrySet()) {
-                                if (e.getKey() != c && e.getValue().intersects(r)) puntaje += 600;   // pisa otra arista
-                            }
-                            puntaje += (lado == 0 ? 0 : Math.abs(lado) == 1 ? 70 : 140) + (f == fPequena ? 40 : 0) + Math.abs(t - 0.5) * 40;
-                            if (puntaje < mejor) { mejor = puntaje; elegido = r; fuenteElegida = f; }
-                        }
-                    }
-                    if (mejor < 40) break;   // con la fuente normal ya hay un buen lugar sobre la línea
-                }
-                ocupados.add(new Rectangle(elegido.x - 2, elegido.y - 1, elegido.width + 4, elegido.height + 2));
+                Rectangle elegido = et.zona;
+                Font fuenteElegida = et.fuente;
 
                 boolean enFoco = !hayFoco
                         || (foco != null ? (a.equals(foco) || b.equals(foco)) : deRuta);
