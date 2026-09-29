@@ -20,6 +20,7 @@ public class CampusRepositorio {
         mA.agregarLugar(new Lugar("L_A5", "Cámara Gesell", "Académico"));
         mA.agregarLugar(new Lugar("L_A6", "Posgrados de Psicología", "Posgrados"));
         mA.agregarLugar(new Lugar("L_A7", "Unidad de Emprendimiento", "Administrativo"));
+        mA.agregarLugar(new Lugar("L_A8", "Facultad de Psicología", "Académico"));
 
         Edificio mB = new Edificio("B", "Edificio B");
         mB.agregarLugar(new Lugar("L_B1", "Departamento de Ciencias Básicas", "Académico"));
@@ -42,7 +43,6 @@ public class CampusRepositorio {
         mD.agregarLugar(new Lugar("L_D5", "Comunicaciones y RRPP", "Administrativo"));
         mD.agregarLugar(new Lugar("L_D6", "Dirección de Docencia", "Administrativo"));
         mD.agregarLugar(new Lugar("L_D7", "Dirección de Planeación", "Administrativo"));
-        mD.agregarLugar(new Lugar("L_D8", "Escuela de Derecho y Ciencias Políticas", "Académico"));
 
         Edificio mE = new Edificio("E", "Edificio E");
         mE.agregarLugar(new Lugar("L_E1", "Sala de Música", "Bienestar"));
@@ -55,6 +55,7 @@ public class CampusRepositorio {
         mF.agregarLugar(new Lugar("L_F2", "Papelería Mi Dulce Papelería", "Servicios"));
         mF.agregarLugar(new Lugar("L_F3", "Sala de Audiencias", "Académico"));
         mF.agregarLugar(new Lugar("L_F4", "Sala de Grupos Culturales / Aulas", "Bienestar"));
+        mF.agregarLugar(new Lugar("L_F5", "Escuela de Derecho y Ciencias Políticas", "Académico"));
 
         Edificio mG = new Edificio("G", "Edificio G");
         mG.agregarLugar(new Lugar("L_G1", "Departamento de Bienestar Universitario", "Bienestar"));
@@ -66,7 +67,6 @@ public class CampusRepositorio {
         mH.agregarLugar(new Lugar("L_H1", "Auditorio Juan Pablo II", "Eventos"));
         mH.agregarLugar(new Lugar("L_H2", "Escuela de Ciencias Sociales", "Académico"));
         mH.agregarLugar(new Lugar("L_H3", "Departamento de Humanística / Aulas", "Académico"));
-        mH.agregarLugar(new Lugar("L_H4", "Facultad de Diseño", "Académico"));
 
         Edificio mI = new Edificio("I", "Edificio I");
         mI.agregarLugar(new Lugar("L_I1", "Laboratorio de Ingeniería Mecánica", "Investigación"));
@@ -98,6 +98,7 @@ public class CampusRepositorio {
         mL.agregarLugar(new Lugar("L_L4", "Aulas / Salas de Informática", "Académico"));
         mL.agregarLugar(new Lugar("L_L5", "Centro de Tecnología de Información y Comunicaciones", "Servicios"));
         mL.agregarLugar(new Lugar("L_L6", "Centro de Lenguas", "Académico"));
+        mL.agregarLugar(new Lugar("L_L7", "Facultad de Diseño", "Académico"));
 
         Edificio mM = new Edificio("M", "Edificio M");
         mM.agregarLugar(new Lugar("L_M1", "Polideportivo: Canchas Múltiples", "Deportes"));

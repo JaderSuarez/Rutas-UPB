@@ -440,13 +440,13 @@ public class PanelMapa extends JPanel {
             }
         }
 
-        // 3. Distancias sobre las aristas, sin que las etiquetas se monten entre sí ni sobre
-        //    los nodos: cada una prueba varias posiciones a lo largo de su arista. Las de la
-        //    ruta se ubican primero. Si no cabe, se omite (se ve al pasar el mouse por el camino).
+        // 3. Distancias sobre las aristas. Cada etiqueta se ubica sobre su propia arista o
+        //    pegada a ella, sin tapar nodos, otras etiquetas ni la línea de OTRA arista (así no
+        //    parece pertenecer a un camino vecino). Si no hay buen lugar, usa una fuente menor.
+        //    Primero la ruta; luego las aristas más cortas, que tienen menos opciones.
         if (mostrarDistancias) {
-            Font fDist = new Font(EstiloUPB.FAMILIA, Font.PLAIN, Math.max(9, (int) Math.round(11 * esc)));
-            g2.setFont(fDist);
-            FontMetrics fm = g2.getFontMetrics();
+            Font fNormal = new Font(EstiloUPB.FAMILIA, Font.PLAIN, Math.max(9, (int) Math.round(11 * esc)));
+            Font fPequena = new Font(EstiloUPB.FAMILIA, Font.PLAIN, Math.max(8, (int) Math.round(9 * esc)));
             java.util.List<Rectangle> ocupados = new java.util.ArrayList<>();
             for (String id : posicionesBase.keySet()) {
                 Point p = aPantalla(id);
@@ -456,53 +456,80 @@ public class PanelMapa extends JPanel {
                     ocupados.add(r);
                 }
             }
-            g2.setFont(fDist);
+            // Trazo (delgado) de cada arista en pantalla, para saber si una etiqueta pisa otra línea
+            java.util.Map<Camino, Shape> trazos = new java.util.HashMap<>();
+            Stroke trazoFino = new BasicStroke(2f);
+            for (Camino c : caminos) {
+                Point pA = aPantalla(c.getOrigenId()), pB = aPantalla(c.getDestinoId());
+                if (pA != null && pB != null)
+                    trazos.put(c, trazoFino.createStrokedShape(formaArista(c.getOrigenId(), c.getDestinoId(), pA, pB)));
+            }
             java.util.List<Camino> orden = new java.util.ArrayList<>(caminos);
-            orden.sort((x, y) -> Boolean.compare(!esAristaDeRuta(x.getOrigenId(), x.getDestinoId()),
-                                                 !esAristaDeRuta(y.getOrigenId(), y.getDestinoId())));
-            double[] posiciones = {0.5, 0.38, 0.62, 0.28, 0.72};
+            orden.removeIf(c -> !trazos.containsKey(c));
+            orden.sort((x, y) -> {
+                int r = Boolean.compare(!esAristaDeRuta(x.getOrigenId(), x.getDestinoId()),
+                                        !esAristaDeRuta(y.getOrigenId(), y.getDestinoId()));
+                if (r != 0) return r;
+                return Double.compare(aPantalla(x.getOrigenId()).distance(aPantalla(x.getDestinoId())),
+                                      aPantalla(y.getOrigenId()).distance(aPantalla(y.getDestinoId())));
+            });
+            double[] posiciones = {0.5, 0.4, 0.6, 0.32, 0.68, 0.25, 0.75};
             for (Camino c : orden) {
                 String a = c.getOrigenId(), b = c.getDestinoId();
                 Point pA = aPantalla(a), pB = aPantalla(b);
-                if (pA == null || pB == null) continue;
                 boolean deRuta = esAristaDeRuta(a, b);
                 String txt = String.format("%.0f m", c.getDistancia());
-                int w = fm.stringWidth(txt) + 10, h = fm.getHeight() + 2;
-                // Se prueba cada posición y se elige la primera totalmente libre; si ninguna lo
-                // está (aristas cortas en zonas muy pobladas, p. ej. I-L, E-H, H-F, F-E, H-G),
-                // se usa la que menos se superponga, en vez de omitir la distancia.
+                double dx = pB.x - pA.x, dy = pB.y - pA.y, largo = Math.max(1, Math.hypot(dx, dy));
+
                 Rectangle elegido = null;
-                int mejorChoque = Integer.MAX_VALUE;
-                buscarPosicion:
-                for (int lado : new int[]{0, 1, -1}) {   // sobre la línea, y desplazada a cada lado
-                    for (double t : posiciones) {
-                        Point m = puntoEn(a, b, pA, pB, t);
-                        if (lado != 0) {   // desplazamiento perpendicular al tramo, para tríos de nodos muy juntos
-                            double dx = pB.x - pA.x, dy = pB.y - pA.y, largo = Math.max(1, Math.hypot(dx, dy));
-                            m = new Point((int) (m.x - dy / largo * (h + 3) * lado), (int) (m.y + dx / largo * (h + 3) * lado));
+                Font fuenteElegida = fNormal;
+                double mejor = Double.MAX_VALUE;
+                for (Font f : new Font[]{fNormal, fPequena}) {
+                    FontMetrics fmx = g2.getFontMetrics(f);
+                    int w = fmx.stringWidth(txt) + (f == fNormal ? 10 : 7), h = fmx.getHeight() + (f == fNormal ? 2 : 0);
+                    // lado 0: sobre la línea; ±1: pegada a un costado; ±2: un poco más separada
+                    // (solo para aristas muy cortas, donde pegada taparía un nodo)
+                    for (int lado : new int[]{0, 1, -1, 2, -2}) {
+                        for (double t : posiciones) {
+                            Point m = puntoEn(a, b, pA, pB, t);
+                            if (lado != 0) {
+                                double sep = Math.abs(lado) == 1 ? h / 2.0 : h * 1.25;
+                                int signo = Integer.signum(lado);
+                                m = new Point((int) Math.round(m.x - dy / largo * sep * signo),
+                                              (int) Math.round(m.y + dx / largo * sep * signo));
+                            }
+                            Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
+                            double puntaje = 0;
+                            for (Rectangle o : ocupados) {   // tapar un nodo u otra etiqueta es lo peor
+                                Rectangle inter = o.intersection(r);
+                                if (!inter.isEmpty()) puntaje += 6.0 * inter.width * inter.height;
+                            }
+                            for (java.util.Map.Entry<Camino, Shape> e : trazos.entrySet()) {
+                                if (e.getKey() != c && e.getValue().intersects(r)) puntaje += 600;   // pisa otra arista
+                            }
+                            puntaje += (lado == 0 ? 0 : Math.abs(lado) == 1 ? 70 : 140) + (f == fPequena ? 40 : 0) + Math.abs(t - 0.5) * 40;
+                            if (puntaje < mejor) { mejor = puntaje; elegido = r; fuenteElegida = f; }
                         }
-                        Rectangle r = new Rectangle(m.x - w / 2, m.y - h / 2, w, h);
-                        int choque = 0;
-                        for (Rectangle o : ocupados) {
-                            Rectangle inter = o.intersection(r);
-                            if (!inter.isEmpty()) choque += inter.width * inter.height;
-                        }
-                        if (choque < mejorChoque) { mejorChoque = choque; elegido = r; }
-                        if (choque == 0) break buscarPosicion;
                     }
+                    if (mejor < 40) break;   // con la fuente normal ya hay un buen lugar sobre la línea
                 }
                 ocupados.add(new Rectangle(elegido.x - 2, elegido.y - 1, elegido.width + 4, elegido.height + 2));
+
                 boolean enFoco = !hayFoco
                         || (foco != null ? (a.equals(foco) || b.equals(foco)) : deRuta);
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, enFoco ? 1f : alfaFuera));
-                RoundRectangle2D pill = new RoundRectangle2D.Double(elegido.x, elegido.y, w, h, h, h);
+                g2.setFont(fuenteElegida);
+                FontMetrics fm = g2.getFontMetrics();
+                int h = elegido.height;
+                RoundRectangle2D pill = new RoundRectangle2D.Double(elegido.x, elegido.y, elegido.width, h, h, h);
                 g2.setColor(Color.WHITE);
                 g2.fill(pill);
                 g2.setColor(deRuta && hayRuta ? ORO : new Color(0xCB, 0xD5, 0xE1));
                 g2.setStroke(new BasicStroke(deRuta && hayRuta ? 1.6f : 1f));
                 g2.draw(pill);
                 g2.setColor(UIColores.TEXTO_OSCURO);
-                g2.drawString(txt, elegido.x + 5, elegido.y + (h + fm.getAscent()) / 2 - 2);
+                g2.drawString(txt, elegido.x + (elegido.width - fm.stringWidth(txt)) / 2,
+                        elegido.y + (h + fm.getAscent() - fm.getDescent()) / 2);
             }
             g2.setComposite(normal);
         }
