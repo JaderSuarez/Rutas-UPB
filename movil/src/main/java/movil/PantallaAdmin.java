@@ -245,8 +245,9 @@ final class PantallaAdmin {
             nuevas.add(new CampusControlador.ConexionNueva(destino, metros, f.escaleras.isChecked()));
         }
         try {
-            // En el celular no hay vista de grafo: se usa la misma posición del mapa como referencia
-            c.agregarEdificio(id, nombre, ubicacion[0] / 2, ubicacion[1] / 2, ubicacion[0], ubicacion[1], nuevas);
+            // El punto se ubica en el mapa ilustrado; su lugar en la vista de grafo se calcula de ahí
+            int[] enGrafo = CoordenadasGrafo.desdeMapa(ubicacion[0], ubicacion[1]);
+            c.agregarEdificio(id, nombre, enGrafo[0], enGrafo[1], ubicacion[0], ubicacion[1], nuevas);
         } catch (IllegalArgumentException ex) {
             Dom.aviso(ex.getMessage(), false);
             return;

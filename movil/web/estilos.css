@@ -270,3 +270,50 @@ select.campo {
 
 .version-escritorio { text-align: center; margin: 0; font-size: 13px; }
 .version-escritorio a { color: var(--vinotinto); }
+
+/* ---------- Vista Mapa / Vista Grafo ---------- */
+.mapa-lienzo-contenedor { position: absolute; inset: 0; }
+.mapa-barra {
+  position: absolute; left: 12px; right: 70px; top: 12px;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none;
+}
+.mapa-barra > * { pointer-events: auto; }
+.selector-vista {
+  display: flex; gap: 4px; background: rgba(233, 227, 214, .95); padding: 4px; border-radius: 12px;
+  box-shadow: var(--sombra);
+}
+.selector-vista .segmento { flex: none; padding: 7px 12px; min-height: 36px; }
+.opciones-grafo { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-opcion {
+  border: 1.5px solid #CBD5E1; background: #fff; color: var(--suave); border-radius: 999px;
+  padding: 5px 12px 5px 30px; font-size: 13px; font-weight: 600; min-height: 32px; cursor: pointer;
+  position: relative; box-shadow: var(--sombra);
+}
+.chip-opcion::before {
+  content: ""; position: absolute; left: 10px; top: 50%; width: 14px; height: 14px; margin-top: -7px;
+  border-radius: 4px; border: 1.5px solid #94A3B8; background: #fff;
+}
+.chip-opcion.activo { border-color: var(--vinotinto); color: var(--vinotinto); }
+.chip-opcion.activo::before {
+  background: var(--vinotinto) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Cpath d='M1 4l3 3 5-6' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") no-repeat center;
+  border-color: var(--vinotinto);
+}
+.mapa-barra .mapa-resumen { position: static; width: 100%; }
+.ficha-titulos { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* Celular en horizontal: los controles en una sola fila para dejar ver el mapa */
+@media (max-height: 520px) {
+  .cabecera { padding-top: calc(4px + env(safe-area-inset-top)); padding-bottom: 4px; }
+  .marca-escudo { width: 30px; height: 30px; }
+  .marca-sub { display: none; }
+  .pestana { min-height: 46px; padding: 4px; flex-direction: row; justify-content: center; gap: 6px; }
+  .pestana .icono { height: 24px; width: 34px; }
+  .mapa-barra { flex-direction: row; flex-wrap: wrap; align-items: center; top: 8px; left: 8px; }
+  .selector-vista .segmento { padding: 5px 10px; min-height: 32px; font-size: 13px; }
+  .chip-opcion { min-height: 30px; font-size: 12.5px; }
+  .mapa-barra .mapa-resumen { width: auto; padding: 2px 4px 2px 12px; }
+  .mapa-controles { top: 8px; flex-direction: row; }
+  .btn-mapa { width: 40px; height: 40px; font-size: 20px; }
+  .mapa-barra { right: 150px; }
+  .ficha, .mapa-ubicar { max-height: 80%; left: auto; width: min(420px, 60%); border-radius: 20px 0 0 0; }
+}

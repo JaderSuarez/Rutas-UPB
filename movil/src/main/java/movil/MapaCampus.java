@@ -2,18 +2,7 @@ package movil;
 
 import controlador.CampusControlador;
 import modelo.Edificio;
-import org.teavm.jso.JSBody;
-import org.teavm.jso.JSProperty;
-import org.teavm.jso.browser.Window;
-import org.teavm.jso.canvas.CanvasRenderingContext2D;
-import org.teavm.jso.dom.events.Event;
-import org.teavm.jso.dom.events.EventListener;
-import org.teavm.jso.dom.events.MouseEvent;
-import org.teavm.jso.dom.events.WheelEvent;
-import org.teavm.jso.dom.html.HTMLCanvasElement;
-import org.teavm.jso.dom.html.HTMLElement;
 import org.teavm.jso.dom.html.HTMLImageElement;
-import org.teavm.jso.dom.html.TextRectangle;
 import persistencia.RepositorioEstado;
 
 import java.util.ArrayList;
@@ -27,39 +16,21 @@ import java.util.function.Consumer;
  * Mapa ilustrado del campus dibujado en un canvas: la imagen de fondo, la ruta
  * calculada siguiendo los caminos reales y un pin por edificio.
  *
- * Se maneja con los dedos: arrastrar para moverse, pellizcar para acercar o alejar,
- * y tocar un pin para ver el edificio. En el modo "ubicar" (panel de administración)
- * un toque devuelve la posición elegida sobre la imagen.
+ * Se maneja con los dedos (ver LienzoTactil): arrastrar, pellizcar y tocar un pin
+ * para ver el edificio. En el modo "ubicar" (panel de administración) un toque
+ * devuelve la posición elegida sobre la imagen.
  */
-final class MapaCampus {
-
-    /** Evento de puntero (dedo, mouse o lápiz): agrega el identificador del puntero. */
-    interface EventoPuntero extends MouseEvent {
-        @JSProperty
-        int getPointerId();
-    }
-
-    @JSBody(params = {"el", "id"}, script = "try { el.setPointerCapture(id); } catch (e) {}")
-    private static native void capturarPuntero(HTMLElement el, int id);
+final class MapaCampus extends LienzoTactil {
 
     private static final String VINOTINTO = "#800020";
     private static final String VINOTINTO_OSCURO = "#5A0016";
     private static final String DORADO = "#D4AF37";
     private static final String VERDE = "#0B7A55";
-    private static final double ZOOM_MAX = 3.0;
     private static final double RADIO_PIN = 13;
 
     private final CampusControlador controlador;
-    private final HTMLElement contenedor = Dom.el("div", "mapa-lienzo");
-    private final HTMLCanvasElement canvas = (HTMLCanvasElement) Dom.el("canvas", null);
-    private final CanvasRenderingContext2D ctx;
     private final HTMLImageElement imagen = (HTMLImageElement) Dom.el("img", null);
     private boolean imagenLista;
-
-    private double escala = 0.5, offX, offY;
-    private double anchoCss = 1, altoCss = 1;
-    private boolean vistaInicial = true;
-    private boolean pendienteDibujo;
 
     private List<String> ruta = new ArrayList<>();
     private String seleccionado;
@@ -67,32 +38,21 @@ final class MapaCampus {
     private Consumer<int[]> alUbicar;
     private int[] marcador;
 
-    // Gestos
-    private final Map<Integer, double[]> punteros = new HashMap<>();
-    private double inicioX, inicioY, escalaInicio, distInicio, medioX0, medioY0, offX0, offY0;
-    private boolean arrastrando, huboPellizco;
-
     MapaCampus(CampusControlador controlador) {
         this.controlador = controlador;
-        ctx = (CanvasRenderingContext2D) canvas.getContext("2d");
-        contenedor.appendChild(canvas);
-
         imagen.listenLoad(e -> {
             imagenLista = true;
             redibujar();
         });
         imagen.setSrc("mapa_campus.jpg");
-
-        canvas.addEventListener("pointerdown", (EventListener<Event>) e -> alBajar((EventoPuntero) e));
-        canvas.addEventListener("pointermove", (EventListener<Event>) e -> alMover((EventoPuntero) e));
-        canvas.addEventListener("pointerup", (EventListener<Event>) e -> alSubir((EventoPuntero) e, true));
-        canvas.addEventListener("pointercancel", (EventListener<Event>) e -> alSubir((EventoPuntero) e, false));
-        canvas.addEventListener("wheel", (EventListener<Event>) e -> alRueda((WheelEvent) e));
-        Window.current().addEventListener("resize", (EventListener<Event>) e -> activar());
     }
 
-    HTMLElement getElemento() {
-        return contenedor;
+    @Override protected double anchoMundo() { return CoordenadasMapa.ANCHO; }
+    @Override protected double altoMundo() { return CoordenadasMapa.ALTO; }
+
+    @Override
+    protected void vistaInicial() {
+        if (ruta.size() > 1) enfocarRuta(); else vistaGeneral();
     }
 
     void setAlTocarEdificio(Consumer<String> accion) {
@@ -123,29 +83,6 @@ final class MapaCampus {
         redibujar();
     }
 
-    /** Se llama cuando el mapa se hace visible o cambia el tamaño de la pantalla. */
-    void activar() {
-        TextRectangle r = contenedor.getBoundingClientRect();
-        if (r.getWidth() <= 0 || r.getHeight() <= 0) return;
-        double dpr = Window.current().getDevicePixelRatio();
-        anchoCss = r.getWidth();
-        altoCss = r.getHeight();
-        canvas.setWidth((int) Math.round(anchoCss * dpr));
-        canvas.setHeight((int) Math.round(altoCss * dpr));
-        if (vistaInicial) {
-            vistaInicial = false;
-            if (ruta.size() > 1) enfocarRuta(); else vistaGeneral();
-        }
-        limitar();
-        redibujar();
-    }
-
-    // ==================== Encuadre y zoom ====================
-
-    private double escalaMinima() {
-        return Math.min(anchoCss / CoordenadasMapa.ANCHO, altoCss / CoordenadasMapa.ALTO);
-    }
-
     /** Vista general: el mapa llena toda la pantalla (en vertical se recorre a lo ancho con el dedo). */
     void vistaGeneral() {
         escala = Math.max(anchoCss / CoordenadasMapa.ANCHO, altoCss / CoordenadasMapa.ALTO);
@@ -154,8 +91,9 @@ final class MapaCampus {
 
     /** Acerca el mapa para que la ruta completa quede a la vista. */
     void enfocarRuta() {
-        if (ruta.size() < 2 || anchoCss <= 1) {
-            vistaInicial = anchoCss <= 1;
+        if (ruta.size() < 2) return;
+        if (!tieneTamano()) {
+            reiniciarVistaAlMostrar();
             return;
         }
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -165,125 +103,11 @@ final class MapaCampus {
                 minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
             }
         }
-        double margen = 60;
-        double ancho = Math.max(1, maxX - minX + margen * 2), alto = Math.max(1, maxY - minY + margen * 2);
-        escala = Math.min(ZOOM_MAX, Math.max(escalaMinima(), Math.min(anchoCss / ancho, altoCss / alto)));
-        centrarEn((minX + maxX) / 2, (minY + maxY) / 2);
-        redibujar();
+        encuadrar(minX, minY, maxX, maxY, 60);
     }
 
-    void acercar(double factor) {
-        zoomEn(anchoCss / 2, altoCss / 2, escala * factor);
-    }
-
-    private void centrarEn(double xImg, double yImg) {
-        offX = anchoCss / 2 - xImg * escala;
-        offY = altoCss / 2 - yImg * escala;
-        limitar();
-    }
-
-    private void zoomEn(double xPantalla, double yPantalla, double nuevaEscala) {
-        nuevaEscala = Math.max(escalaMinima(), Math.min(ZOOM_MAX, nuevaEscala));
-        double xImg = (xPantalla - offX) / escala, yImg = (yPantalla - offY) / escala;
-        escala = nuevaEscala;
-        offX = xPantalla - xImg * escala;
-        offY = yPantalla - yImg * escala;
-        limitar();
-        redibujar();
-    }
-
-    /** Evita que el mapa se salga de la pantalla. */
-    private void limitar() {
-        escala = Math.max(escalaMinima(), Math.min(ZOOM_MAX, escala));
-        double w = CoordenadasMapa.ANCHO * escala, h = CoordenadasMapa.ALTO * escala;
-        offX = w <= anchoCss ? (anchoCss - w) / 2 : Math.min(0, Math.max(anchoCss - w, offX));
-        offY = h <= altoCss ? (altoCss - h) / 2 : Math.min(0, Math.max(altoCss - h, offY));
-    }
-
-    // ==================== Gestos ====================
-
-    private double[] posicionLocal(MouseEvent e) {
-        TextRectangle r = canvas.getBoundingClientRect();
-        return new double[]{e.getClientX() - r.getLeft(), e.getClientY() - r.getTop()};
-    }
-
-    private void alBajar(EventoPuntero e) {
-        e.preventDefault();
-        capturarPuntero(canvas, e.getPointerId());
-        double[] p = posicionLocal(e);
-        punteros.put(e.getPointerId(), p);
-        if (punteros.size() == 1) {
-            inicioX = p[0]; inicioY = p[1];
-            offX0 = offX; offY0 = offY;
-            arrastrando = false;
-            huboPellizco = false;
-        } else if (punteros.size() == 2) {
-            iniciarPellizco();
-        }
-    }
-
-    private void iniciarPellizco() {
-        List<double[]> ps = new ArrayList<>(punteros.values());
-        double[] a = ps.get(0), b = ps.get(1);
-        distInicio = Math.max(1, Math.hypot(a[0] - b[0], a[1] - b[1]));
-        medioX0 = (a[0] + b[0]) / 2; medioY0 = (a[1] + b[1]) / 2;
-        escalaInicio = escala; offX0 = offX; offY0 = offY;
-        huboPellizco = true;
-    }
-
-    private void alMover(EventoPuntero e) {
-        if (!punteros.containsKey(e.getPointerId())) return;
-        e.preventDefault();
-        double[] p = posicionLocal(e);
-        punteros.put(e.getPointerId(), p);
-
-        if (punteros.size() >= 2) {
-            List<double[]> ps = new ArrayList<>(punteros.values());
-            double[] a = ps.get(0), b = ps.get(1);
-            double dist = Math.max(1, Math.hypot(a[0] - b[0], a[1] - b[1]));
-            double medioX = (a[0] + b[0]) / 2, medioY = (a[1] + b[1]) / 2;
-            double xImg = (medioX0 - offX0) / escalaInicio, yImg = (medioY0 - offY0) / escalaInicio;
-            escala = Math.max(escalaMinima(), Math.min(ZOOM_MAX, escalaInicio * dist / distInicio));
-            offX = medioX - xImg * escala;
-            offY = medioY - yImg * escala;
-            limitar();
-            redibujar();
-        } else if (!huboPellizco) {
-            double dx = p[0] - inicioX, dy = p[1] - inicioY;
-            if (!arrastrando && Math.hypot(dx, dy) > 8) arrastrando = true;
-            if (arrastrando) {
-                offX = offX0 + dx;
-                offY = offY0 + dy;
-                limitar();
-                redibujar();
-            }
-        }
-    }
-
-    private void alSubir(EventoPuntero e, boolean valido) {
-        if (!punteros.containsKey(e.getPointerId())) return;
-        double[] p = posicionLocal(e);
-        punteros.remove(e.getPointerId());
-        if (punteros.size() == 1) {
-            // Queda un dedo: sigue como arrastre desde donde está
-            double[] resto = punteros.values().iterator().next();
-            inicioX = resto[0]; inicioY = resto[1];
-            offX0 = offX; offY0 = offY;
-            arrastrando = true;
-            return;
-        }
-        if (punteros.isEmpty() && valido && !arrastrando && !huboPellizco) {
-            alTocar(p[0], p[1]);
-        }
-    }
-
-    private void alRueda(WheelEvent e) {
-        e.preventDefault();
-        double[] p = posicionLocal(e);
-        zoomEn(p[0], p[1], escala * (e.getDeltaY() < 0 ? 1.15 : 1 / 1.15));
-    }
-
-    private void alTocar(double x, double y) {
+    @Override
+    protected void alTocar(double x, double y) {
         if (alUbicar != null) {
             int xImg = (int) Math.round((x - offX) / escala), yImg = (int) Math.round((y - offY) / escala);
             if (xImg < 0 || yImg < 0 || xImg > CoordenadasMapa.ANCHO || yImg > CoordenadasMapa.ALTO) return;
@@ -344,8 +168,6 @@ final class MapaCampus {
         return puntos;
     }
 
-    private double aPantallaX(double x) { return x * escala + offX; }
-    private double aPantallaY(double y) { return y * escala + offY; }
 
     /** Texto corto dentro del pin. */
     static String etiquetaCorta(String id) {
@@ -359,20 +181,8 @@ final class MapaCampus {
 
     // ==================== Dibujo ====================
 
-    void redibujar() {
-        if (pendienteDibujo) return;
-        pendienteDibujo = true;
-        Window.requestAnimationFrame(t -> {
-            pendienteDibujo = false;
-            dibujar();
-        });
-    }
-
-    private void dibujar() {
-        double dpr = Window.current().getDevicePixelRatio();
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.setFillStyle("#E9EEF3");
-        ctx.fillRect(0, 0, anchoCss, altoCss);
+    @Override
+    protected void dibujarContenido() {
         if (!imagenLista) {
             ctx.setFillStyle("#64748B");
             ctx.setFont("15px system-ui, sans-serif");
@@ -469,13 +279,7 @@ final class MapaCampus {
         // El letrero se vuelve a pintar encima: la línea de la ruta "pasa por debajo"
         ctx.setGlobalAlpha(1);
         ctx.drawImage(imagen, r[0], r[1], r[2], r[3], aPantallaX(r[0]), aPantallaY(r[1]), r[2] * escala, r[3] * escala);
-        ctx.beginPath();
-        ctx.moveTo(x + radio, y);
-        ctx.arcTo(x + w, y, x + w, y + h, radio);
-        ctx.arcTo(x + w, y + h, x, y + h, radio);
-        ctx.arcTo(x, y + h, x, y, radio);
-        ctx.arcTo(x, y, x + w, y, radio);
-        ctx.closePath();
+        rectRedondeado(x, y, w, h, radio);
         ctx.setGlobalAlpha(1);
         if (colorRuta != null || seleccionado) {
             ctx.setLineWidth(seleccionado ? 4 : 3.5);

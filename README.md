@@ -23,7 +23,7 @@ Escanea el QR o abre **https://jadersuarez.github.io/Rutas-UPB/** desde el celul
 
 - **Ruta:** origen, destino y opción *evitar escaleras*; distancia, tiempo y recorrido paso a paso.
 - **Buscar:** lugares del campus (cafeterías, oficinas, laboratorios…) sin importar tildes.
-- **Mapa:** mapa ilustrado con la ruta; arrastra para moverte, pellizca para hacer zoom y toca un edificio para ver sus lugares.
+- **Mapa:** igual que en PC, con **Vista Mapa** (la ilustración) y **Vista Grafo** (edificios, caminos con y sin escaleras, bloqueos, distancias y convenciones). Arrastra para moverte, pellizca para hacer zoom y toca un edificio o un camino para ver su información.
 - **Iniciar sesión / registro** y **panel de administración** (bloquear caminos, agregar puntos, velocidades, historial).
 
 Está escrita en **Java** (carpeta `movil/`) y se traduce a JavaScript con [TeaVM](https://teavm.org/). Reutiliza la misma lógica de la app de escritorio: `CampusControlador`, `GrafoCampus`, Dijkstra, `EstimadorTiempo`, `BuscadorLugares` y los repositorios. Los datos (usuarios, bloqueos, puntos nuevos) se guardan en el navegador de cada celular.
@@ -82,7 +82,9 @@ movil/src/main/java/movil   → versión para celular (Java → JavaScript con T
 ├── AppMovil          → punto de entrada y navegación por pestañas
 ├── PantallaAcceso    → inicio de sesión, registro y acceso administrador
 ├── PantallaRuta / PantallaBuscar / PantallaMapa / PantallaAdmin
-├── MapaCampus        → mapa en canvas con zoom táctil, pines y ruta
+├── LienzoTactil     → canvas con arrastre, pellizco y toque (base de las dos vistas)
+├── MapaCampus        → Vista Mapa: ilustración con pines y ruta
+├── VistaGrafo        → Vista Grafo: la misma de vista.PanelMapa, adaptada al celular
 └── PersistenciaWeb   → guarda los archivos de datos en el navegador (localStorage)
 ```
 

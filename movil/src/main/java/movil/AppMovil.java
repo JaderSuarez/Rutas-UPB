@@ -32,6 +32,7 @@ public class AppMovil {
     ResultadoRuta resultado;
 
     MapaCampus mapa;
+    VistaGrafo grafo;
     private PantallaRuta pantallaRuta;
     private PantallaBuscar pantallaBuscar;
     private PantallaMapa pantallaMapa;
@@ -109,6 +110,7 @@ public class AppMovil {
         barraNavegacion = Dom.el("nav", "navegacion");
 
         mapa = new MapaCampus(controlador);
+        grafo = new VistaGrafo(controlador);
         pantallaRuta = new PantallaRuta(this);
         pantallaBuscar = new PantallaBuscar(this);
         pantallaMapa = new PantallaMapa(this);
@@ -167,11 +169,13 @@ public class AppMovil {
     String calcularRuta() {
         resultado = null;
         mapa.setRuta(null);
+        grafo.setRuta(null);
         if (origen == null || destino == null) return "Elige el punto de partida y el destino.";
         if (origen.equals(destino)) return "El origen y el destino son el mismo lugar.";
         try {
             resultado = controlador.solicitarRuta(origen, destino, evitarEscaleras);
             mapa.setRuta(resultado.getCaminoEdificios());
+            grafo.setRuta(resultado.getCaminoEdificios());
             return null;
         } catch (RutaNoEncontradaException e) {
             return evitarEscaleras
@@ -183,13 +187,14 @@ public class AppMovil {
     void verRutaEnMapa() {
         mostrar("mapa");
         mapa.enfocarRuta();
+        grafo.enfocarRuta();
     }
 
     /** Desde el mapa o la búsqueda: fija el origen o el destino y vuelve a la pestaña de ruta. */
     void usarComo(String id, boolean comoOrigen) {
         if (comoOrigen) origen = id; else destino = id;
         if (origen != null && destino != null && !origen.equals(destino)) calcularRuta();
-        else { resultado = null; mapa.setRuta(null); }
+        else { resultado = null; mapa.setRuta(null); grafo.setRuta(null); }
         mostrar("ruta");
     }
 
@@ -197,7 +202,7 @@ public class AppMovil {
     void alCambiarGrafo() {
         persistir();
         if (resultado != null) calcularRuta();
-        mapa.redibujar();
+        pantallaMapa.refrescar();
         pantallaRuta.recargarListas();
     }
 
